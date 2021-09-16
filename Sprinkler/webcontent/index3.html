@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" xmins="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8" />
+    <title></title>
+<script type="text/javascript">
+
+function sprinklerOn(){
+     var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("divResult").innerHTML =
+      this.responseText;
+	document.getElementById("mStatus").innerHTML = "Status : Requested to turn ON";
+
+    }
+  };
+  xhttp.open("GET", "/sprinkler/on?which=A", true);
+  xhttp.send();
+}
+
+
+
+
+
+function sprinklerOff(){
+     var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("divResult").innerHTML =
+      this.responseText;
+	document.getElementById("mStatus").innerHTML = "Status : Requested to turn OFF";
+    }
+  };
+  xhttp.open("GET", "/sprinkler/off?which=A", true);
+  xhttp.send();
+}
+
+function sprinklerSensorReader(){
+     var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("divResult").innerHTML = "Current Moisture Reading Level : " +
+      this.responseText;
+	document.getElementById("mStatus").innerHTML = "Status : AUTO";
+	var mtLow = document.getElementById("mLow").value;
+	var mtMax = document.getElementById("mMax").value;
+
+     
+     if(parseFloat("0"+this.responseText)>parseFloat(mtMax))
+        sprinklerOff();
+     if(parseFloat("0"+this.responseText)<parseFloat(mtLow))
+      sprinklerOn();
+    }
+  };
+  xhttp.open("GET", "/sprinkler/readsensor?which=A", true);
+  xhttp.send();
+}
+function setAuto(){var intervalLimit = document.getElementById("intervalLimit").value;
+ window.setInterval(sprinklerSensorReader,parseInt(intervalLimit) * 1000);}
+
+
+</script>
+<body>
+Moisture Threshold <Input type=text value="1.8" id="mLow"> <Input type=text value="2.5" id="mMax">
+<br /> Auto Interval (Sec) <input type=text value="1" id="intervalLimit">
+<br />
+ <input type=button value="Turn On" onclick="javascript:sprinklerOn();">
+ <input type=button value="Turn Off" onclick="javascript:sprinklerOff();">
+<input type=button value=Auto onclick="javascript:setAuto();">
+<p id="mStatus"> Status : </p>
+
+ <p> Response: </p>
+ 
+ <div id="divResult" style="width:100%; height:200px;background-color:lightgrey"></div>
+</body>
+</html>
