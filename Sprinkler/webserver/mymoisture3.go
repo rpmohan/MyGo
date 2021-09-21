@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-    "time"
+	"time"
 
 	"gobot.io/x/gobot/platforms/raspi"
 	"periph.io/x/periph/conn/i2c/i2creg"
@@ -19,7 +19,6 @@ import (
 var pi *raspi.Adaptor
 var sprinkerAEnabled bool
 var maxSprinklerOnTime int = 10000
-
 
 func main() {
 
@@ -33,11 +32,9 @@ func main() {
 
 	static := http.FileServer(http.Dir("../webcontent"))
 	http.Handle("/", static)
-//    defer bus.Close()
+	//    defer bus.Close()
 	log.Printf("About to listen on 8081 to http://localhost:8081/")
 	log.Fatal(http.ListenAndServe(":8081", nil))
-
-    
 
 }
 func getSensorReadingLevelForWeb(w http.ResponseWriter, r *http.Request) {
@@ -113,24 +110,27 @@ func sprinklerOn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switchRelay(whichSprinkler[0], 0)
-    sprinkerAEnabled = true
+	if !(whichSprinkler[0] == "A" || whichSprinkler[0] == "B") {
+		fmt.Fprintf(w, "Invalid name for sprinkler  %v", whichSprinkler[0])
+	}
+
+	sprinkerAEnabled = true
 
 	fmt.Fprintf(w, "Sprinkler %v is turned on", whichSprinkler)
 }
 
 func switchRelay(relayName string, mode byte) {
 	if mode == 0 {
-        DurationOfTime := time.Duration(10) * time.Second
-        Timer1 := time.AfterFunc(DurationOfTime, switchRelay(relayName,1))
-        defer Timer1.Stop()
-    }
-    switch relayName {
+		DurationOfTime := time.Duration(10) * time.Second
+		Timer1 := time.AfterFunc(DurationOfTime, func() { switchRelay(relayName, 1) })
+		defer Timer1.Stop()
+	}
+	switch relayName {
 	case "A":
 		pi.DigitalWrite("31", mode)
 	case "B":
 		pi.DigitalWrite("35", mode)
 	default:
-		fmt.Fprintf(w, "Invalid name for sprinkler  %v", relayName)
 		return
 	}
 
@@ -138,36 +138,33 @@ func switchRelay(relayName string, mode byte) {
 
 func sprinklerOff(w http.ResponseWriter, r *http.Request) {
 
-	var moistureLevel float64
-
 	whichSprinkler := r.URL.Query()["which"]
 	fmt.Fprintf(w, "Will attempt to turn off  %v", whichSprinkler)
 
 	switchRelay(whichSprinkler[0], 1)
 	fmt.Fprintf(w, "Sprinkler %v is turned off", whichSprinkler)
-    sprinkerAEnabled = false
+	sprinkerAEnabled = false
 }
 
-func operateSprinklerWithMoisture(relayName string){
-    for {
-        moistureLevel = getSensorReading(relayName)
-        fmt.Printf("Realy Name: %s Moisture Level : %d \n ",relayName, moistureLevel)
-        if sprinkerAEnabled {
-            if enoughMoisture(moistureLevel) == false {
-                fmt.Fprintf(w, "Not Enough Moisture. Turning ON Sprinkler  : ", moistureLevel)
-                switchRelay(whichSprinkler[0], 0)
-            }
-            else {
-                fmt.Fprintf(w, " Enough Moisture. Turning OFF Sprinkler  : ", moistureLevel)
-                switchRelay(whichSprinkler[0], 1)
-            
-            }
-        }
-        time.sleep(2 * time.Second)
+func operateSprinklerWithMoisture(relayName string) {
+	var moistureLevel float64
+	for {
+		moistureLevel = getSensorReading(relayName)
+		fmt.Printf("Realy Name: %s Moisture Level : %d \n ", relayName, moistureLevel)
+		if sprinkerAEnabled == true {
+			if enoughMoisture(moistureLevel) == false {
+				fmt.Println("Not Enough Moisture. Turning ON Sprinkler : ", moistureLevel)
+				switchRelay(relayName, 0)
+			} else {
+				fmt.Println("Enough Moisture. Turning OFF Sprinkler : ", moistureLevel)
+				switchRelay(relayName, 1)
 
+			}
+		}
+		time.Sleep(2 * time.Second)
 
-    }
-    
+	}
+
 }
 
 func enoughMoisture(moistureLevel float64) bool {
