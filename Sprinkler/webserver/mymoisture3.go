@@ -17,8 +17,8 @@ import (
 )
 
 var pi *raspi.Adaptor
-var sprinkerAEnabled bool
-var maxSprinklerOnTime int = 10000
+var sprinkerAEnabled bool = true
+var maxSprinklerOnTime int = 10
 
 func main() {
 
@@ -27,7 +27,7 @@ func main() {
 	http.HandleFunc("/sprinkler/on", sprinklerOn)
 
 	http.HandleFunc("/sprinkler/off", sprinklerOff)
-	http.HandleFunc("/sprinkler/readsensor", getSensorReadingLevelForWeb)
+	//http.HandleFunc("/sprinkler/readsensor", getSensorReadingLevelForWeb)
 	go operateSprinklerWithMoisture("A")
 
 	static := http.FileServer(http.Dir("../webcontent"))
@@ -80,6 +80,7 @@ func getSensorReading(sprinklerNum string) float64 {
 	pin, err := adc.PinForChannel(channelNum, 5*physic.Volt, 1*physic.Hertz, ads1x15.SaveEnergy)
 	fmt.Printf("value of  pin  :%v \n", pin)
 	if err != nil {
+		fmt.Printf("error occired  :%v \n", pin)
 		log.Fatalln(err)
 	}
 	defer pin.Halt()
@@ -121,7 +122,7 @@ func sprinklerOn(w http.ResponseWriter, r *http.Request) {
 
 func switchRelay(relayName string, mode byte) {
 	if mode == 0 {
-		DurationOfTime := time.Duration(10) * time.Second
+		DurationOfTime := time.Duration(maxSprinklerOnTime) * time.Second
 		Timer1 := time.AfterFunc(DurationOfTime, func() { switchRelay(relayName, 1) })
 		defer Timer1.Stop()
 	}
@@ -150,7 +151,7 @@ func operateSprinklerWithMoisture(relayName string) {
 	var moistureLevel float64
 	for {
 		moistureLevel = getSensorReading(relayName)
-		fmt.Printf("Realy Name: %s Moisture Level : %d \n ", relayName, moistureLevel)
+		fmt.Printf("Realy Name: %s Moisture Level : %f sprinkerAEnabled :%t\n ", relayName, moistureLevel, sprinkerAEnabled)
 		if sprinkerAEnabled == true {
 			if enoughMoisture(moistureLevel) == false {
 				fmt.Println("Not Enough Moisture. Turning ON Sprinkler : ", moistureLevel)
